@@ -15,6 +15,7 @@ const documentQueue = new Queue('document-processing', {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379'),
     password: process.env.REDIS_PASSWORD || undefined,
+    username: process.env.REDIS_USERNAME,
   },
 });
 
@@ -37,12 +38,10 @@ export async function ragRoutes(app: FastifyInstance) {
         reply.send({ status: 'queued', documentId: id });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        reply
-          .code(500)
-          .send({
-            error: 'Failed to queue document processing',
-            details: message,
-          });
+        reply.code(500).send({
+          error: 'Failed to queue document processing',
+          details: message,
+        });
       }
     }
   );
@@ -67,12 +66,10 @@ export async function ragRoutes(app: FastifyInstance) {
         reply.send({ results });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        reply
-          .code(500)
-          .send({
-            error: 'Failed to retrieve relevant chunks',
-            details: message,
-          });
+        reply.code(500).send({
+          error: 'Failed to retrieve relevant chunks',
+          details: message,
+        });
       }
     }
   );
