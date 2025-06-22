@@ -3,15 +3,11 @@ import { Queue } from 'bullmq';
 import { FastifyInstance } from 'fastify';
 import { getTenantContext } from '../auth/multiTenant';
 import { requireRole } from '../auth/roles';
+import redis from '../redis';
 
 // Setup BullMQ queue (ensure connection options match your Redis setup)
 const documentQueue = new Queue('document-processing', {
-  connection: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD || undefined,
-    username: process.env.REDIS_USERNAME
-  },
+  connection: redis,
 });
 
 const prisma = new PrismaClient();
@@ -36,12 +32,10 @@ export async function documentRoutes(app: FastifyInstance) {
         reply.send({ status: 'queued', documentId, tenant });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        reply
-          .code(500)
-          .send({
-            error: 'Failed to queue document processing',
-            details: message,
-          });
+        reply.code(500).send({
+          error: 'Failed to queue document processing',
+          details: message,
+        });
       }
     }
   );
@@ -66,13 +60,11 @@ export async function documentRoutes(app: FastifyInstance) {
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        reply
-          .code(500)
-          .send({
-            error: 'Failed to fetch document status',
-            details: message,
-            tenant,
-          });
+        reply.code(500).send({
+          error: 'Failed to fetch document status',
+          details: message,
+          tenant,
+        });
       }
     }
   );

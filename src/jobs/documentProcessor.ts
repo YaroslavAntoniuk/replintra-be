@@ -4,6 +4,7 @@ import 'reflect-metadata';
 import { Container } from 'typedi';
 import { ChunkingAndEmbeddingService } from '../rag/chunkingAndEmbedding';
 import { DocumentExtractionService } from '../rag/documentExtraction';
+import redis from '../redis';
 
 const prisma = new PrismaClient();
 
@@ -44,11 +45,6 @@ export const documentWorker = new Worker(
     }
   },
   {
-    connection: {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD || undefined,
-      username: process.env.REDIS_USERNAME,
-    },
+    connection: redis,
   }
 );

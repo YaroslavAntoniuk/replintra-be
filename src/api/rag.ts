@@ -8,15 +8,11 @@ import { FastifyInstance } from 'fastify';
 import { Container } from 'typedi';
 import { requireRole } from '../auth/roles';
 import { RetrievalService } from '../rag/retrievalService';
+import redis from '../redis';
 
 // Setup BullMQ queue (ensure connection options match your Redis setup)
 const documentQueue = new Queue('document-processing', {
-  connection: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD || undefined,
-    username: process.env.REDIS_USERNAME,
-  },
+  connection: redis,
 });
 
 export async function ragRoutes(app: FastifyInstance) {
