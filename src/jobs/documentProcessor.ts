@@ -46,5 +46,12 @@ export const documentWorker = new Worker(
   },
   {
     connection: redis,
-  }
+    stalledInterval: 120000, // check for stalled jobs every 2min (default 30s)
+    lockDuration: 180000,    // lock jobs for 3min (default 30s)
+    maxStalledCount: 1,      // fail jobs quickly if stalled
+    runRetryDelay: 120000,   // delay before retrying a failed job (default 5s)
+    drainDelay: 1000,        // wait 1s before draining next job batch
+    concurrency: 1,          // process one job at a time (dev safe)
+    // You can further tune: skipStalledCheck: true, skipLockRenewal: true (not recommended for prod)
+  },
 );
