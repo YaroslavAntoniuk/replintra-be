@@ -1,0 +1,235 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  size      String?
+  industry  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users        User[]
+  chatbots     Chatbot[]
+  subscription Subscription?
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  emailVerified      DateTime?
+  name               String?
+  password           String?
+  image              String?
+  role               UserRole  @default(USER)
+  onboardingComplete Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @default(now()) @updatedAt
+
+  tenantId String? // Make this optional for OAuth users
+  tenant   Tenant?   @relation(fields: [tenantId], references: [id])
+  accounts Account[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+model Chatbot {
+  id              String        @id @default(cuid())
+  name            String
+  slug            String        @unique
+  description     String?
+  status          ChatbotStatus @default(ACTIVE)
+  welcomeMessage  String?
+  fallbackMessage String?
+  avatarUrl       String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @default(now()) @updatedAt
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  documents     ChatbotDocument[]
+  settings      ChatbotSettings?
+  conversations Conversation[]
+}
+
+enum ChatbotStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model ChatbotSettings {
+  id        String  @id @default(cuid())
+  chatbotId String  @unique
+  chatbot   Chatbot @relation(fields: [chatbotId], references: [id])
+
+  tone             String? // Added tone field for chatbot personality
+  temperature      Float   @default(0.7)
+  systemPrompt     String?
+  enableMemory     Boolean @default(false)
+  responseLanguage String? @default("en") // default language for responses
+  contextLength    Int     @default(6) // number of chunks to retrieve
+}
+
+model ChatbotDocument {
+  id        String  @id @default(cuid())
+  chatbotId String
+  chatbot   Chatbot @relation(fields: [chatbotId], references: [id])
+
+  // RAG/Document relations
+  documentId String?   @unique
+  document   Document? @relation(fields: [documentId], references: [id])
+
+  // Common fields
+  name        String
+  sourceType  DocumentSourceType
+  contentHash String
+  createdAt   DateTime           @default(now())
+  status      DocumentStatus     @default(UPLOADING)
+
+  // Optional fields for file/web/manual sources
+  sourceUrl   String? // URL if web source
+  fileUrl     String? // uploaded file (PDF etc.)
+  textContent String? // manual text input
+  mimeType    String? // MIME type of the document
+  size        Int? // Size in bytes, optional for manual text input
+
+  // B2 Integration Fields
+  b2FileId        String? // B2 file ID for retrieval/deletion
+  b2FileName      String? // Original filename in B2
+  uploadTimestamp BigInt? // B2 upload timestamp
+}
+
+model Document {
+  id         String            @id @default(cuid())
+  fileName   String
+  fileType   String
+  fileSize   Int
+  chatbotId  String
+  status     DocumentStatusRAG @default(UPLOADED)
+  rawContent String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  chunks          DocumentChunk[]
+  chatbotDocument ChatbotDocument?
+
+  @@index([chatbotId])
+}
+
+model DocumentChunk {
+  id         String   @id @default(cuid())
+  documentId String
+  content    String
+  chunkIndex Int
+  tokenCount Int?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+}
+
+enum DocumentStatusRAG {
+  UPLOADED
+  PROCESSING
+  PROCESSED
+  CHUNKED
+  EMBEDDED
+  FAILED
+}
+
+enum DocumentStatus {
+  UPLOADING
+  READY
+  FAILED
+}
+
+enum DocumentSourceType {
+  FILE
+  URL
+  MANUAL
+}
+
+model Conversation {
+  id        String  @id @default(cuid())
+  chatbotId String
+  chatbot   Chatbot @relation(fields: [chatbotId], references: [id])
+
+  title     String?
+  createdAt DateTime @default(now())
+
+  messages Message[]
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  role      MessageRole
+  content   String
+  createdAt DateTime    @default(now())
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+model Subscription {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  planId String
+  plan   Plan   @relation(fields: [planId], references: [id])
+
+  stripeCustomerId String?
+  stripeSubId      String?
+  currentPeriodEnd DateTime?
+  createdAt        DateTime  @default(now())
+}
+
+model Plan {
+  id            String         @id @default(cuid())
+  name          String
+  price         Int // cents
+  monthly       Boolean        @default(true)
+  maxChats      Int
+  maxFiles      Int
+  subscriptions Subscription[]
+}
