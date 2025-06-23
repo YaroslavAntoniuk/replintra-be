@@ -1,14 +1,8 @@
 import { PrismaClient } from '@prisma/client';
-import { Queue } from 'bullmq';
 import { FastifyInstance } from 'fastify';
 import { getTenantContext } from '../auth/multiTenant';
 import { requireRole } from '../auth/roles';
-import redis from '../redis';
-
-// Setup BullMQ queue (ensure connection options match your Redis setup)
-const documentQueue = new Queue('document-processing', {
-  connection: redis,
-});
+import { smartWorker } from '../jobs/documentProcessor';
 
 const prisma = new PrismaClient();
 
@@ -22,7 +16,7 @@ export async function documentRoutes(app: FastifyInstance) {
       const { documentId, b2FileId, fileName, fileType, chatbotId } =
         request.body as any;
       try {
-        await documentQueue.add('document-processing', {
+        await smartWorker.queue.add('document-processing', {
           documentId,
           b2FileId,
           fileName,

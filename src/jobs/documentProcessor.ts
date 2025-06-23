@@ -4,13 +4,13 @@ import 'reflect-metadata';
 import { Container } from 'typedi';
 import { ChunkingAndEmbeddingService } from '../rag/chunkingAndEmbedding';
 import { DocumentExtractionService } from '../rag/documentExtraction';
-import redis from '../redis';
+import redis from '../services/redis';
 
 const prisma = new PrismaClient();
 
 class SmartDocumentWorker {
+  public queue: Queue; // Make queue public for API access
   private worker: Worker;
-  private queue: Queue;
   private idleTimeout: NodeJS.Timeout | null = null;
   private isIdle = false;
   private readonly IDLE_DELAY = 5 * 60 * 1000; // 5 minutes
@@ -163,6 +163,7 @@ class SmartDocumentWorker {
 }
 
 export const smartWorker = new SmartDocumentWorker();
+export const documentQueue = smartWorker.queue;
 
 process.on('SIGINT', async () => {
   console.log('[Worker] Shutting down gracefully...');

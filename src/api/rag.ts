@@ -3,17 +3,11 @@
  * - POST /rag/process/:id: Enqueue document processing job
  * - POST /rag/retrieve: Retrieve relevant chunks for a query
  */
-import { Queue } from 'bullmq';
 import { FastifyInstance } from 'fastify';
 import { Container } from 'typedi';
 import { requireRole } from '../auth/roles';
+import { smartWorker } from '../jobs/documentProcessor';
 import { RetrievalService } from '../rag/retrievalService';
-import redis from '../redis';
-
-// Setup BullMQ queue (ensure connection options match your Redis setup)
-const documentQueue = new Queue('document-processing', {
-  connection: redis,
-});
 
 export async function ragRoutes(app: FastifyInstance) {
   // Trigger document processing pipeline (enqueue job)
@@ -24,7 +18,7 @@ export async function ragRoutes(app: FastifyInstance) {
       const { id } = request.params as { id: string };
       const { b2FileId, fileName, fileType, chatbotId } = request.body as any;
       try {
-        await documentQueue.add('document-processing', {
+        await smartWorker.queue.add('document-processing', {
           documentId: id,
           b2FileId,
           fileName,

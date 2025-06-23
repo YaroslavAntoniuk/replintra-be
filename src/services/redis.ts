@@ -1,11 +1,8 @@
-import Redis from 'ioredis';
-import { Service } from 'typedi';
+import IORedis from 'ioredis';
 
-@Service()
-export class RedisService {
-  public client: Redis;
+// Singleton Redis connection for the entire backend
+const redis = new IORedis(process.env.REDIS_URL!, {
+  maxRetriesPerRequest: null,
+});
 
-  constructor() {
-    this.client = new Redis(process.env.REDIS_URL!);
-  }
-}
+export default redis;
