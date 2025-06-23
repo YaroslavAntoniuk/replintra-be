@@ -8,7 +8,7 @@ const redis = new IORedis(process.env.REDIS_URL!, {
   enableAutoPipelining: true,   // Allow pipelining for efficiency
   connectTimeout: 15000,        // 15s connect timeout
   commandTimeout: 15000,        // 15s command timeout
-  family: 4,
+  family: 0,                    // Use IPv4 (0) or IPv6 (6)
   enableReadyCheck: true,       // Ensure connection is ready
 });
 
