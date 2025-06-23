@@ -93,13 +93,23 @@ export class ChunkingAndEmbeddingService {
               fileName,
               fileType: document.fileType,
               totalChunks: chunks.length,
+              content: chunk.content, // Added content field
             },
           },
         ],
       };
       console.log(
         '[Qdrant] Upsert payload:',
-        JSON.stringify(upsertPayload, null, 2)
+        JSON.stringify({
+          chunkId: chunk.id,
+          documentId,
+          chatbotId,
+          chunkIndex: chunk.chunkIndex,
+          fileName,
+          fileType: document.fileType,
+          totalChunks: chunks.length,
+          content: chunk.content, // Added content field
+        }, null, 2)
       );
       try {
         await qdrantService.client.upsert(chatbotId, upsertPayload);

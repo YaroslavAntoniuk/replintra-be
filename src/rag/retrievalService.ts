@@ -38,7 +38,7 @@ export class RetrievalService {
       fileName: res.payload?.fileName,
       fileType: res.payload?.fileType,
       totalChunks: res.payload?.totalChunks,
-      content: res.payload?.content, // If you store content in payload
+      content: res.payload?.content, 
       similarity: res.score,
       metadata: res.payload,
     }));
