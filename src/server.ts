@@ -53,7 +53,7 @@ async function buildApp() {
     origin: true,
     credentials: true,
   });
-  await app.register(redis, { url: process.env.REDIS_URL });
+  await app.register(redis, { url: process.env.REDIS_URL, family: 0 });
 
   await app.register(rateLimit, {
     max: parseInt(process.env.RATE_LIMIT_MAX || '100'),
