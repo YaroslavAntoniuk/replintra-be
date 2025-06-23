@@ -1,24 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model Tenant {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  size      String?
-  industry  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  users        User[]
+  id           String        @id @default(cuid())
+  name         String
+  slug         String        @unique
+  size         String?
+  industry     String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   chatbots     Chatbot[]
   subscription Subscription?
+  users        User[]
 }
 
 model Account {
@@ -27,15 +26,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
@@ -47,104 +45,83 @@ model User {
   emailVerified      DateTime?
   name               String?
   password           String?
-  image              String?
   role               UserRole  @default(USER)
-  onboardingComplete Boolean   @default(false)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @default(now()) @updatedAt
-
-  tenantId String? // Make this optional for OAuth users
-  tenant   Tenant?   @relation(fields: [tenantId], references: [id])
-  accounts Account[]
+  tenantId           String?
+  image              String?
+  onboardingComplete Boolean   @default(false)
+  accounts           Account[]
+  tenant             Tenant?   @relation(fields: [tenantId], references: [id])
 
   @@map("users")
 }
 
-enum UserRole {
-  ADMIN
-  USER
-}
-
 model Chatbot {
-  id              String        @id @default(cuid())
+  id              String            @id @default(cuid())
   name            String
-  slug            String        @unique
+  slug            String            @unique
   description     String?
-  status          ChatbotStatus @default(ACTIVE)
+  status          ChatbotStatus     @default(ACTIVE)
   welcomeMessage  String?
   fallbackMessage String?
   avatarUrl       String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @default(now()) @updatedAt
-
-  tenantId String
-  tenant   Tenant @relation(fields: [tenantId], references: [id])
-
-  documents     ChatbotDocument[]
-  settings      ChatbotSettings?
-  conversations Conversation[]
-}
-
-enum ChatbotStatus {
-  ACTIVE
-  INACTIVE
+  createdAt       DateTime          @default(now())
+  tenantId        String
+  updatedAt       DateTime          @default(now()) @updatedAt
+  apiKey          String            @unique // API key for public chatbot endpoint
+  tenant          Tenant            @relation(fields: [tenantId], references: [id])
+  documents       ChatbotDocument[]
+  settings        ChatbotSettings?
+  conversations   Conversation[]
 }
 
 model ChatbotSettings {
-  id        String  @id @default(cuid())
-  chatbotId String  @unique
-  chatbot   Chatbot @relation(fields: [chatbotId], references: [id])
-
-  tone             String? // Added tone field for chatbot personality
+  id               String  @id @default(cuid())
+  chatbotId        String  @unique
   temperature      Float   @default(0.7)
   systemPrompt     String?
   enableMemory     Boolean @default(false)
-  responseLanguage String? @default("en") // default language for responses
-  contextLength    Int     @default(6) // number of chunks to retrieve
+  contextLength    Int     @default(6)
+  responseLanguage String? @default("en")
+  tone             String?
+  logConversations Boolean @default(false)
+  chatbot          Chatbot @relation(fields: [chatbotId], references: [id])
 }
 
 model ChatbotDocument {
-  id        String  @id @default(cuid())
-  chatbotId String
-  chatbot   Chatbot @relation(fields: [chatbotId], references: [id])
-
-  // RAG/Document relations
-  documentId String?   @unique
-  document   Document? @relation(fields: [documentId], references: [id])
-
-  // Common fields
-  name        String
-  sourceType  DocumentSourceType
-  contentHash String
-  createdAt   DateTime           @default(now())
-  status      DocumentStatus     @default(UPLOADING)
-
-  // Optional fields for file/web/manual sources
-  sourceUrl   String? // URL if web source
-  fileUrl     String? // uploaded file (PDF etc.)
-  textContent String? // manual text input
-  mimeType    String? // MIME type of the document
-  size        Int? // Size in bytes, optional for manual text input
-
-  // B2 Integration Fields
-  b2FileId        String? // B2 file ID for retrieval/deletion
-  b2FileName      String? // Original filename in B2
-  uploadTimestamp BigInt? // B2 upload timestamp
+  id              String             @id @default(cuid())
+  chatbotId       String
+  name            String
+  sourceType      DocumentSourceType
+  sourceUrl       String?
+  fileUrl         String?
+  contentHash     String
+  createdAt       DateTime           @default(now())
+  textContent     String?
+  mimeType        String?
+  size            Int?
+  status          DocumentStatus     @default(UPLOADING)
+  b2FileId        String?
+  b2FileName      String?
+  uploadTimestamp BigInt?
+  documentId      String?            @unique
+  chatbot         Chatbot            @relation(fields: [chatbotId], references: [id])
+  document        Document?          @relation(fields: [documentId], references: [id])
 }
 
 model Document {
-  id         String            @id @default(cuid())
-  fileName   String
-  fileType   String
-  fileSize   Int
-  chatbotId  String
-  status     DocumentStatusRAG @default(UPLOADED)
-  rawContent String?
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
-
-  chunks          DocumentChunk[]
+  id              String            @id @default(cuid())
+  fileName        String
+  fileType        String
+  fileSize        Int
+  chatbotId       String
+  status          DocumentStatusRAG @default(UPLOADED)
+  rawContent      String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
   chatbotDocument ChatbotDocument?
+  chunks          DocumentChunk[]
 
   @@index([chatbotId])
 }
@@ -157,10 +134,60 @@ model DocumentChunk {
   tokenCount Int?
   metadata   Json?
   createdAt  DateTime @default(now())
-
-  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@index([documentId])
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  userId    String?
+  chatbotId String
+  title     String?
+  createdAt DateTime  @default(now())
+  chatbot   Chatbot   @relation(fields: [chatbotId], references: [id])
+  messages  Message[]
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  role           MessageRole
+  content        String
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+}
+
+model Subscription {
+  id               String    @id @default(cuid())
+  tenantId         String    @unique
+  planId           String
+  stripeCustomerId String?
+  stripeSubId      String?
+  currentPeriodEnd DateTime?
+  createdAt        DateTime  @default(now())
+  plan             Plan      @relation(fields: [planId], references: [id])
+  tenant           Tenant    @relation(fields: [tenantId], references: [id])
+}
+
+model Plan {
+  id            String         @id @default(cuid())
+  name          String
+  price         Int
+  monthly       Boolean        @default(true)
+  maxChats      Int
+  maxFiles      Int
+  subscriptions Subscription[]
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum ChatbotStatus {
+  ACTIVE
+  INACTIVE
 }
 
 enum DocumentStatusRAG {
@@ -184,52 +211,7 @@ enum DocumentSourceType {
   MANUAL
 }
 
-model Conversation {
-  id        String  @id @default(cuid())
-  chatbotId String
-  chatbot   Chatbot @relation(fields: [chatbotId], references: [id])
-
-  title     String?
-  createdAt DateTime @default(now())
-
-  messages Message[]
-}
-
-model Message {
-  id             String       @id @default(cuid())
-  conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
-
-  role      MessageRole
-  content   String
-  createdAt DateTime    @default(now())
-}
-
 enum MessageRole {
   USER
   ASSISTANT
-}
-
-model Subscription {
-  id       String @id @default(cuid())
-  tenantId String @unique
-  tenant   Tenant @relation(fields: [tenantId], references: [id])
-
-  planId String
-  plan   Plan   @relation(fields: [planId], references: [id])
-
-  stripeCustomerId String?
-  stripeSubId      String?
-  currentPeriodEnd DateTime?
-  createdAt        DateTime  @default(now())
-}
-
-model Plan {
-  id            String         @id @default(cuid())
-  name          String
-  price         Int // cents
-  monthly       Boolean        @default(true)
-  maxChats      Int
-  maxFiles      Int
-  subscriptions Subscription[]
 }

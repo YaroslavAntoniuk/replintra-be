@@ -6,8 +6,9 @@ import redis from '@fastify/redis';
 import dotenv from 'dotenv';
 import Fastify from 'fastify';
 import { getToken } from 'next-auth/jwt';
-import { documentRoutes } from './api/documents';
-import { ragRoutes } from './api/rag';
+import { chatbotRoutes } from './routes/chatbot.routes';
+import { documentRoutes } from './routes/document.routes';
+import { ragRoutes } from './routes/rag.routes';
 
 // Load env vars
 dotenv.config();
@@ -62,7 +63,11 @@ async function buildApp() {
 
   app.addHook('preHandler', async (request, reply) => {
     // Skip auth for public routes and health check
-    if (request.url.startsWith('/public') || request.url === '/health') {
+    if (
+      request.url.startsWith('/public') ||
+      request.url === '/health' ||
+      request.url.startsWith('/api/chatbot')
+    ) {
       return;
     }
 
@@ -78,7 +83,7 @@ async function buildApp() {
         const cookies = request.headers.cookie;
         if (cookies) {
           const match = cookies.match(/next-auth\.session-token=([^;]+)/);
-          if (match) {
+          if (match && match[1]) {
             token = decodeURIComponent(match[1]);
           }
         }
@@ -103,9 +108,16 @@ async function buildApp() {
   // Example route
   app.get('/health', async () => ({ status: 'ok' }));
 
-  // Register document API routes
-  await app.register(documentRoutes);
-  await app.register(ragRoutes);
+  // Register routes
+  await app.register(documentRoutes, {
+    prefix: '/api/documents',
+  });
+  await app.register(ragRoutes, {
+    prefix: '/api/rag',
+  });
+  await app.register(chatbotRoutes, {
+    prefix: '/api/chatbot',
+  });
 }
 
 // Start server in an async context
